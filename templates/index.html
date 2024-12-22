@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Summary Generator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      .form-container {
+        margin-bottom: 20px;
+      }
+      input[type="url"] {
+        width: 70%;
+        padding: 8px;
+        margin-right: 10px;
+      }
+      button {
+        padding: 8px 16px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:disabled {
+        background-color: #cccccc;
+      }
+      .results {
+        margin-top: 20px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        display: none;
+      }
+      .loading {
+        display: none;
+        color: #666;
+      }
+      .error {
+        color: red;
+        display: none;
+      }
+      pre {
+        white-space: pre-wrap;
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        font-family: inherit;
+        margin: 10px 0;
+      }
+      details {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      summary {
+        cursor: pointer;
+        padding: 5px;
+        font-weight: bold;
+      }
+      summary:hover {
+        background-color: #f0f0f0;
+      }
+      .segment {
+        margin: 10px 0;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .video-title {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin: 20px 0;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Video Summary Generator</h1>
+
+    <div class="form-container">
+      <form id="videoForm">
+        <input
+          type="url"
+          id="videoUrl"
+          placeholder="Enter YouTube URL"
+          required
+        />
+        <button type="submit">Generate Summary</button>
+      </form>
+    </div>
+
+    <div id="loading" class="loading">
+      Generating summary... This may take a few minutes.
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div id="results" class="results">
+      <h2>Summary Results</h2>
+      <div id="videoTitle" class="video-title"></div>
+      <div id="summaryContent"></div>
+    </div>
+
+    <script>
+      document
+        .getElementById("videoForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault()
+
+          const form = e.target
+          const submitButton = form.querySelector("button")
+          const loading = document.getElementById("loading")
+          const results = document.getElementById("results")
+          const error = document.getElementById("error")
+          const summaryContent = document.getElementById("summaryContent")
+
+          // Reset display
+          error.style.display = "none"
+          results.style.display = "none"
+          loading.style.display = "block"
+          submitButton.disabled = true
+
+          try {
+            const response = await fetch("/process-video", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                video_url: document.getElementById("videoUrl").value,
+              }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to generate summary")
+            }
+
+            // Display results
+            summaryContent.innerHTML = ""
+
+            // Display video title
+            const videoTitleElement = document.getElementById("videoTitle")
+            videoTitleElement.textContent = data.video_title || "Untitled Video"
+
+            for (const [filename, result] of Object.entries(data.results)) {
+              const overallSummary = result.overall_summary
+              const chunkSummaries = result.chunk_summaries
+
+              summaryContent.innerHTML += `
+                        <h3>Overall Summary</h3>
+                        <pre>${overallSummary}</pre>
+                        
+                        <details>
+                            <summary>Segment Summaries (${
+                              chunkSummaries.length
+                            } segments)</summary>
+                            ${chunkSummaries
+                              .map(
+                                (summary, index) => `
+                                <div class="segment">
+                                    <h4>Segment ${index + 1}</h4>
+                                    <pre>${summary}</pre>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </details>
+                    `
+            }
+
+            results.style.display = "block"
+          } catch (err) {
+            error.textContent = err.message
+            error.style.display = "block"
+          } finally {
+            loading.style.display = "none"
+            submitButton.disabled = false
+          }
+        })
+    </script>
+  </body>
+</html>
