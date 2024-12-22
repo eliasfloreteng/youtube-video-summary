@@ -306,6 +306,7 @@ def process_video_endpoint():
         segments_file = os.path.join(
             video_folder, f"{safe_video_id}_chunk_summaries.txt"
         )
+        title_file = os.path.join(video_folder, f"{safe_video_id}_title.txt")
 
         if os.path.exists(summary_file) and os.path.exists(segments_file):
             with open(summary_file, "r", encoding="utf-8") as f:
@@ -313,9 +314,15 @@ def process_video_endpoint():
             with open(segments_file, "r", encoding="utf-8") as f:
                 chunk_summaries = f.read().split("\n\n")
 
+            video_title = "Untitled Video"
+            if os.path.exists(title_file):
+                with open(title_file, "r", encoding="utf-8") as f:
+                    video_title = f.read().strip()
+
             return jsonify(
                 {
                     "video_id": safe_video_id,
+                    "video_title": video_title,
                     "status": "cached",
                     "results": {
                         "subtitles": {
@@ -389,6 +396,8 @@ def process_video_endpoint():
                 }
 
             # Update file saving to use safe_video_id
+            with open(f"{safe_video_id}_title.txt", "w", encoding="utf-8") as f:
+                f.write(video_title)
             with open(
                 f"{safe_video_id}_chunk_summaries.txt", "w", encoding="utf-8"
             ) as f:
