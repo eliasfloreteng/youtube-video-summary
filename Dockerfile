@@ -15,8 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create uploads directory
+# Create uploads directory and declare as volume
 RUN mkdir -p uploads
+VOLUME ["/app/uploads"]
 
 # Set environment variables
 ENV PORT=8000
