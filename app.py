@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify, render_template
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import yt_dlp
 import xml.etree.ElementTree as ET
 import os
@@ -12,6 +14,17 @@ from werkzeug.utils import secure_filename
 import concurrent.futures
 
 app = Flask(__name__)
+
+# Add rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["100 per day", "10 per hour"],
+    storage_uri="memory://",
+)
+
+# Add max transcript length (characters)
+MAX_TRANSCRIPT_LENGTH = 100000  # Adjust this value as needed
 
 
 @app.route("/")
@@ -207,6 +220,12 @@ def process_video_summary(video_url):
         with open(txt_file, "r", encoding="utf-8") as f:
             full_text = f.read()
 
+        # Check transcript length
+        if len(full_text) > MAX_TRANSCRIPT_LENGTH:
+            raise ValueError(
+                f"Transcript is too long ({len(full_text)} characters). Maximum allowed is {MAX_TRANSCRIPT_LENGTH} characters."
+            )
+
         # Chunk the text
         chunks = chunk_text(full_text)
         logging.info(f"Split text into {len(chunks)} chunks")
@@ -279,6 +298,7 @@ def health_check():
 
 
 @app.route("/process-video", methods=["POST"])
+@limiter.limit("1 per minute")  # Add specific rate limit for this endpoint
 def process_video_endpoint():
     try:
         data = request.get_json()
@@ -364,6 +384,14 @@ def process_video_endpoint():
 
                 with open(txt_file, "r", encoding="utf-8") as f:
                     full_text = f.read()
+
+                # Check transcript length
+                if len(full_text) > MAX_TRANSCRIPT_LENGTH:
+                    return jsonify(
+                        {
+                            "error": f"Transcript is too long ({len(full_text)} characters). Maximum allowed is {MAX_TRANSCRIPT_LENGTH} characters."
+                        }
+                    ), 413  # Request Entity Too Large
 
                 # Chunk the text
                 chunks = chunk_text(full_text)
