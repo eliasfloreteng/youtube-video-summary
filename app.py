@@ -298,7 +298,7 @@ def health_check():
 
 
 @app.route("/process-video", methods=["POST"])
-@limiter.limit("1 per minute")  # Add specific rate limit for this endpoint
+@limiter.limit("2 per minute")  # Add specific rate limit for this endpoint
 def process_video_endpoint():
     try:
         data = request.get_json()
