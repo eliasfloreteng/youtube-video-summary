@@ -42,8 +42,24 @@
         color: #666;
       }
       .error {
-        color: red;
+        color: #721c24;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 10px 0;
         display: none;
+      }
+      .error-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .error-message {
+        margin-bottom: 5px;
+      }
+      .error-help {
+        font-size: 0.9em;
+        color: #555;
       }
       pre {
         white-space: pre-wrap;
@@ -101,7 +117,11 @@
       Generating summary... This may take a few minutes.
     </div>
 
-    <div id="error" class="error"></div>
+    <div id="error" class="error">
+      <div class="error-title">Error</div>
+      <div class="error-message"></div>
+      <div class="error-help"></div>
+    </div>
 
     <div id="results" class="results">
       <h2>Summary Results</h2>
@@ -110,6 +130,36 @@
     </div>
 
     <script>
+      function getErrorHelp(status, errorMessage) {
+        const errorHelp = {
+          400: "Please make sure you've entered a valid YouTube URL.",
+          404: "No subtitles found for this video. The video might not have automatic captions available.",
+          413: "The video transcript is too long to process. Please try a shorter video.",
+          429: "Too many requests. Please wait a few minutes before trying again.",
+          500: "Server error. Please try again later.",
+        }
+
+        // Check for specific error messages
+        if (errorMessage.includes("too long")) {
+          return "Please try a shorter video or contact support if you need to process longer videos."
+        }
+
+        return (
+          errorHelp[status] ||
+          "Please try again or contact support if the problem persists."
+        )
+      }
+
+      function showError(message, status) {
+        const error = document.getElementById("error")
+        const errorMessage = error.querySelector(".error-message")
+        const errorHelp = error.querySelector(".error-help")
+
+        errorMessage.textContent = message
+        errorHelp.textContent = getErrorHelp(status, message)
+        error.style.display = "block"
+      }
+
       document
         .getElementById("videoForm")
         .addEventListener("submit", async (e) => {
@@ -180,8 +230,7 @@
 
             results.style.display = "block"
           } catch (err) {
-            error.textContent = err.message
-            error.style.display = "block"
+            showError(err.message, err.response?.status)
           } finally {
             loading.style.display = "none"
             submitButton.disabled = false
