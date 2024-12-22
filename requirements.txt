@@ -1,0 +1,4 @@
+flask==3.0.2
+yt-dlp==2024.3.10
+anthropic==0.18.1
+werkzeug==3.0.1
